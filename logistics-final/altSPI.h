@@ -3,20 +3,20 @@
 
 #include "config.h"
 
-class SPIA {
+class AltSPI {
 private:
   uint8_t _cfgByte;
   uint8_t _enabled;
 
 public:
-  SPIA(const uint8_t cfgByte):
+  AltSPI(const uint8_t cfgByte):
     _cfgByte(cfgByte) {
   }
-  ~SPIA() {
+  ~AltSPI() {
     this->disable();
   }
 
-  void setCfgByte(uint8_t cfgByte) {
+  inline void setCfgByte(const uint8_t cfgByte) {
     _cfgByte = cfgByte;
     if(_enabled) {
       this->enable();
@@ -33,13 +33,13 @@ public:
 
   }
 
-  inline void writeToSlave(const uint8_t byte, const uint8_t ssPin) {
+  inline void writeToSlave(const uint8_t byte, const uint8_t ssPin) const {
     cli();
-    digitalWrite(ssPin, HIGH);
+    digitalWrite(ssPin, LOW);
     delayMicroseconds(1);
     SPDR = byte;
     delayMicroseconds(70);
-    digitalWrite(ssPin, LOW);
+    digitalWrite(ssPin, HIGH);
     delayMicroseconds(1);
     sei();
   }

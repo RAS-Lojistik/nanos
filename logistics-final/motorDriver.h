@@ -6,12 +6,11 @@
 
 class MotorDriver {
 private:
+  ShiftRegister* const _sr;
   const uint8_t _leftPWMPin;
-  const uint8_t _rightPWMPin;
-
-  const SR* _sr;
   const uint8_t _leftIn1BitOrder;
   const uint8_t _leftIn2BitOrder;
+  const uint8_t _rightPWMPin;
   const uint8_t _rightIn1BitOrder;
   const uint8_t _rightIn2BitOrder;
   uint8_t _srBitMask;
@@ -21,7 +20,7 @@ private:
   uint8_t _lastRightDirection = 2;
 
 public:
-  MotorDriver(const SR* sr, const uint8_t leftPWMPin, const uint8_t leftIn1BitOrder, const uint8_t leftIn2BitOrder,
+  MotorDriver(ShiftRegister* const sr, const uint8_t leftPWMPin, const uint8_t leftIn1BitOrder, const uint8_t leftIn2BitOrder,
                             const uint8_t rightPWMPin, const uint8_t rightIn1BitOrder, const uint8_t rightIn2BitOrder): 
                    _sr(sr), _leftPWMPin(leftPWMPin), _leftIn1BitOrder(leftIn1BitOrder), _leftIn2BitOrder(leftIn2BitOrder),
                             _rightPWMPin(rightPWMPin), _rightIn1BitOrder(rightIn1BitOrder), _rightIn2BitOrder(rightIn2BitOrder) {
@@ -34,8 +33,8 @@ public:
       if(_lastLeftDirection != 1) {
         _lastLeftDirection = 1;
         _srChangeFlag = 1;
-        _srByte |= (1 << _leftIn1BitOrder);
-        _srByte &= ~(1 << _leftIn2BitOrder);
+        _srByte |= (1UL << _leftIn1BitOrder);
+        _srByte &= ~(1UL << _leftIn2BitOrder);
       }
     }
     else {
@@ -43,8 +42,8 @@ public:
       if(_lastLeftDirection != 0) {
         _lastLeftDirection = 0;
         _srChangeFlag = 1;
-        _srByte &= ~(1 << _leftIn1BitOrder);
-        _srByte |= (1 << _leftIn2BitOrder);
+        _srByte &= ~(1UL << _leftIn1BitOrder);
+        _srByte |= (1UL << _leftIn2BitOrder);
       }
     }
 
@@ -52,8 +51,8 @@ public:
       if(_lastRightDirection != 1) {
         _lastRightDirection = 1;
         _srChangeFlag = 1;
-        _srByte |= (1 << _rightIn1BitOrder);
-        _srByte &= ~(1 << _rightIn2BitOrder);
+        _srByte |= (1UL << _rightIn1BitOrder);
+        _srByte &= ~(1UL << _rightIn2BitOrder);
       }
     }
     else {
@@ -61,8 +60,8 @@ public:
       if(_lastRightDirection != 0) {
         _lastRightDirection = 0;
         _srChangeFlag = 1;
-        _srByte &= ~(1 << _rightIn1BitOrder);
-        _srByte |= (1 << _rightIn2BitOrder);
+        _srByte &= ~(1UL << _rightIn1BitOrder);
+        _srByte |= (1UL << _rightIn2BitOrder);
       }
     }    
 

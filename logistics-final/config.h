@@ -3,7 +3,7 @@
 
 #include <QTRSensors.h>
 
-#define NDEBUG
+#define DEBUG
 
 namespace cfg {
   static const float k_base = 120;
@@ -12,11 +12,23 @@ namespace cfg {
 
   static const uint8_t k_sensorCount = 6;
   static const QTRReadMode k_readMode = QTRReadMode::OnAndOff;
-  static const uint8_t k_calibrationCount = 100;
+  static const uint16_t k_calibrationMoveDuration = 150;
+  static const uint16_t k_calibrationMoveSpeed = 60;
+  static const uint8_t k_calibrationWiggleCount = 3;
 
   static const uint32_t k_serialBaudRate = 115200; 
 
   static const uint8_t k_SPIConfigByte = 0b00000010; //00[DataOrder]0[POLARITY1][POLARITY2][CLOCK1][CLOCK2]
+
+  namespace srOrders {
+    static const uint8_t left1 = 0;
+    static const uint8_t left2 = 1;
+    static const uint8_t right1 = 2;
+    static const uint8_t right2 = 3;
+    static const uint8_t LEDRed = 4;
+    static const uint8_t LEDGreen = 5;
+    static const uint8_t LEDBlue = 6;
+  }
 
   namespace pins {
     static const uint8_t emitter = 12;
