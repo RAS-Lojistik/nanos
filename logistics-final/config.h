@@ -3,12 +3,20 @@
 
 #include <QTRSensors.h>
 
-#define DEBUG
+#define DEBUG_SERIAL
+#define DEBUG_LED
 
 namespace cfg {
   static const float k_base = 120;
   static const float k_p = 150;
   static const float k_d = 5;
+
+  static const float k_onLineThreshold = 0.2;
+
+  static const float k_turnRightSpeed = 70;
+  static const float k_turnLeftSpeed = 70;
+  static const float k_forwardSpeed = 70;
+  static const float k_forwardDuration = 150;
 
   static const uint8_t k_sensorCount = 6;
   static const QTRReadMode k_readMode = QTRReadMode::OnAndOff;

@@ -25,6 +25,9 @@ public:
   inline void redOff() {
     _sr->setBit(_redSROrder, 0);
   }
+  inline void redToggle() {
+    _sr->toggleBit(_redSROrder);
+  }
 
   inline void greenOn() {
     _sr->setBit(_greenSROrder, 1UL);
@@ -32,12 +35,18 @@ public:
   inline void greenOff() {
     _sr->setBit(_greenSROrder, 0);
   }
+  inline void greenToggle() {
+    _sr->toggleBit(_greenSROrder);
+  }
 
   inline void blueOn() {
     _sr->setBit(_blueSROrder, 1UL);
   }
   inline void blueOff() {
     _sr->setBit(_blueSROrder, 0);
+  }
+  inline void blueToggle() {
+    _sr->toggleBit(_blueSROrder);
   }
 };
 
