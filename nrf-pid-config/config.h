@@ -2,7 +2,7 @@
 
 #include <QTRSensors.h>
 
-#define NDEBUG
+#define DEBUG
 namespace cfg{
   static const float k_base = 120;
   static const float k_iCap = 100;
@@ -10,12 +10,12 @@ namespace cfg{
   static const float k_i = 0;
   static const float k_d = 5;
 
-  static const uint8_t k_sensorCount = 6;
+  static const uint8_t k_sensorCount = 8;
   static const QTRReadMode k_readMode = QTRReadMode::OnAndOff;
 
   namespace pins{
-    static const uint8_t emitter = 12;
-    static const uint8_t qtr[] = {A0, A1, A2, A3, A4, A5};
+    static const uint8_t emitter = 4;
+    static const uint8_t qtr[] = { A0, A1, A2, A3, A4, A5, A6, A7 };
 
     static const uint8_t leftMotor1 = 4;
     static const uint8_t leftMotor2 = 5;

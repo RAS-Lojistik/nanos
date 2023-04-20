@@ -1,8 +1,8 @@
-#define CLOCK_PIN 6
-#define STROBE_PIN 7
+#define CLOCK_PIN 7
+#define STROBE_PIN 9
 #define DATA_PIN 8
 
-uint8_t bitArrays[] = {0b00000001, 0b00000010, 0b00000100, 0b00001000};
+uint8_t bitArrays[] = {0b11000001, 0b00100010, 0b00000100, 0b00011000};
 
 void setup() {
   pinMode(CLOCK_PIN, OUTPUT);

@@ -65,11 +65,11 @@ public:
       }
     }    
 
-    if(leftSpeed > 255) {
-      leftSpeed = 255;
+    if(leftSpeed > 250) {
+      leftSpeed = 250;
     }
-    if(rightSpeed > 255) {
-      rightSpeed = 255;
+    if(rightSpeed > 250) {
+      rightSpeed = 250;
     }
 
     if(_srChangeFlag) {

@@ -10,7 +10,7 @@ private:
   inline void push() const {
     cli();
     for(uint8_t j = 0; j < 8; j++) {
-      if((0b00000001 << j) & this->byte) {
+      if((0b10000000 >> j) & this->byte) {
         digitalWrite(_dataPin, HIGH);
       } 
       else {

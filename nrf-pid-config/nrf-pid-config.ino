@@ -25,7 +25,7 @@ void setup() {
 #endif
 
   delay(3000);
-  for (uint8_t i = 0; i < 70; i++) {
+  for (uint8_t i = 0; i < 120; i++) {
     qtr.calibrate(cfg::k_readMode);
   }  
 
