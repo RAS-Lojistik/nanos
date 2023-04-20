@@ -7,9 +7,9 @@
 
 uint16_t GetCommandsWithNRF(char** commands) {
     *(commands) = new char[6];
-    char buffer[] = "fffffs";
-    memcpy(*(commands), buffer, 6);  
-    return 6;
+    char buffer[] = "ffrffrfrffls";
+    memcpy(*(commands), buffer, 13);  
+    return 13;
 }
 
 #endif

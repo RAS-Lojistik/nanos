@@ -9,21 +9,21 @@
 #define aLOGI_TEST
 
 namespace cfg {
-  static const int16_t k_base = 60;
-  static const float k_p = 0.055;
-  static const float k_d = 1300;
+  static const int16_t k_base = 55;
+  static const float k_p = 0.05;
+  static const float k_d = 1200;
 
-  static const float k_onLineThreshold = 0.2;
+  static const float k_onLineThreshold = 0.4f;
 
-  static const int16_t k_turnRightSpeed = 40; //DURATION 750 FOR 90 DEGREES
-  static const int16_t k_turnLeftSpeed = 40;
+  static const int16_t k_turnRightSpeed = 35; //DURATION 750 FOR 90 DEGREES
+  static const int16_t k_turnLeftSpeed = 35;
   static const int16_t k_forwardSpeed = 40;
-  static const int16_t k_forwardDuration = 550;
+  static const int16_t k_forwardDuration = 580;
 
   static const uint8_t k_sensorCount = 6;
   static const QTRReadMode k_readMode = QTRReadMode::On;
 
-  static const uint32_t k_lineColorTimeout = 150000;
+  static const uint32_t k_lineColorTimeout = 250000;
 
   static const uint16_t k_calibrationMoveDuration = 1300;
   static const uint16_t k_calibrationMoveSpeed = 35;
