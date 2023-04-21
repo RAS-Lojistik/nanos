@@ -32,7 +32,7 @@ namespace {
   int16_t lastError = 0;
   int16_t currentError = 0;
 
-  int16_t PIDSpeedModifier = 0.f;
+  int16_t PIDSpeedModifier = 0;
   #ifdef DEBUG_SERIAL
     char* serialPrintBuffer = new char[250];
   #endif
@@ -50,7 +50,7 @@ namespace {
   volatile uint8_t lastOnLineFlag = 1;
   volatile uint8_t onLineFlag = 1;
 
-  uint8_t runOnceFlag = 0;
+  uint8_t turnRunOnceFlag = 0;
 
   uint8_t junctionDoubleTestFlag = 0;
 }
@@ -82,6 +82,7 @@ void setup() {
     //START SERIAL CONNECTION
       #ifdef DEBUG_SERIAL
         Serial.begin(cfg::k_serialBaudRate);
+        while(!Serial) {}
         Serial.println("Serial connected.");
       #endif
 
@@ -90,17 +91,6 @@ void setup() {
 
     //SETUP MOTOR DRIVER
       driver.drive(0, 0);
-      #ifdef DEBUG_MOTOR
-        driver.drive(250, 250);
-        delay(1000);
-        driver.drive(-250, -250);
-        delay(1000);
-        driver.drive(0, 250);
-        delay(500);
-        driver.drive(250, 0);
-        delay(500);
-        driver.drive(0, 0);
-      #endif      
     
     //SETUP & CALIBRATE QTR
       #ifdef DEBUG_SERIAL
@@ -109,11 +99,6 @@ void setup() {
       qtr.setTypeAnalog();
       qtr.setEmitterPin(cfg::pins::emitter);
       qtr.setSensorPins(cfg::pins::qtr, cfg::k_sensorCount);
-        /* BACKUP
-        for(uint16_t i = 0; i < 400; i++) {
-          qtr.calibrate(cfg::k_readMode);
-        }
-        */
       for(uint8_t i = 0; i < cfg::k_calibrationWiggleCount; i++) {
         lastTime = millis();
         driver.drive(-cfg::k_calibrationMoveSpeed, cfg::k_calibrationMoveSpeed);
@@ -137,23 +122,24 @@ void setup() {
       #endif
 
     //SETUP DEBUG LEDS
+      leds.redOn();
+      delay(333);
       leds.redOff();
+      leds.greenOn();
+      delay(333);
       leds.greenOff();
-      leds.blueOff();
-      #ifdef DEBUG_LED
-        leds.redOn();
-        delay(333);
-        leds.redOff();
-        leds.greenOn();
-        delay(333);
-        leds.greenOff();
-        leds.blueOn();
-        delay(333);
-        leds.blueOff();  
-      #endif    
+      leds.blueOn();
+      delay(333);
+      leds.blueOff();    
 
   //GET COMMANDS
-    numberOfCommands = GetCommandsWithNRF(&commands);
+    leds.redOn();
+    leds.greenOn();
+    leds.blueOn();
+    numberOfCommands = getCommandsWithNRF(&commands);
+    leds.redOff();
+    leds.greenOff();
+    leds.blueOff();
 
   //SETUP SPI 
     spi.enable();
@@ -169,18 +155,6 @@ void loop() {
   //POSITION & LINE COLOR  
     position = (lineColorFlag) ? qtr.readLineWhite(sensorValues, cfg::k_readMode) : qtr.readLineBlack(sensorValues, cfg::k_readMode);
     lastLineColorFlag = lineColorFlag;
-    /*if(sensorValues[0] < 300 && sensorValues[1] < 700 && (sensorValues[2] > 300 || sensorValues[3] > 300) && sensorValues[4] < 700 && sensorValues[5] < 300) {
-      if(lastLineColorFlag) {
-        lineColorFlag = 0;
-        position = qtr.readLineBlack(sensorValues, cfg::k_readMode);
-      }
-    }
-    else if(sensorValues[0] > 700 && sensorValues[1] > 300 && (sensorValues[2] < 700 || sensorValues[3] < 700) && sensorValues[4] > 300 && sensorValues[5] > 700) {
-      if(!lastLineColorFlag) {
-        lineColorFlag = 1;
-        position = qtr.readLineWhite(sensorValues, cfg::k_readMode);
-      }
-    }*/
     if(sensorValues[0] < 300 && ((sensorValues[1] < 300 && sensorValues[2] < 300 && sensorValues[3] > 700 && sensorValues[4] > 700) || 
                                  (sensorValues[1] > 700 && sensorValues[2] > 700 && sensorValues[3] < 300 && sensorValues[4] < 300) || 
                                  (sensorValues[1] < 300 && sensorValues[2] > 700 && sensorValues[3] > 700 && sensorValues[4] < 300 )) && sensorValues[5] < 300) {
@@ -202,17 +176,10 @@ void loop() {
         sensorValues[i] = 1000 - sensorValues[i];
       }
     }
-    #ifdef DEBUG_LED
-      if(lastLineColorFlag != lineColorFlag) {
-        leds.redToggle();
-        lineColorTime = micros() - 1;           
-      }
-    #endif
-    #ifdef DEBUG_SERIAL
-      sprintf(serialPrintBuffer, "Sensor Values: %" PRIu16 "\t%" PRIu16 "\t%" PRIu16 "\t%" PRIu16 "\t%" PRIu16 "\t%" PRIu16 "\n", sensorValues[0], sensorValues[1], sensorValues[2],
-                                                                                                                                  sensorValues[3], sensorValues[4], sensorValues[5]);
-      Serial.print(serialPrintBuffer);
-    #endif    
+    if(lastLineColorFlag != lineColorFlag) {
+      leds.redToggle();
+      lineColorTime = micros() - 1;           
+    }
 
   //ERROR & IS ON LINE
     lastError = currentError;
@@ -229,28 +196,7 @@ void loop() {
 
   //STATE MACHINE
     #ifdef LOGI_TEST
-      /*if(!runOnceFlag) {
-        driver.drive(cfg::k_forwardSpeed, cfg::k_forwardSpeed);
-        delay(cfg::k_forwardDuration);
-        runOnceFlag = 1;
-      }
-      driver.drive(cfg::k_turnRightSpeed, -cfg::k_turnRightSpeed);
-      if(!lastOnLineFlag && onLineFlag) {
-        runOnceFlag = 0;
-      }*/
-      #ifdef DEBUG_SERIAL
-        leftSpeed = cfg::k_base + PIDSpeedModifier;
-        rightSpeed = cfg::k_base - PIDSpeedModifier;
-        sprintf(serialPrintBuffer, "                                                                 Left: %" PRId16 "\n", leftSpeed);
-        Serial.print(serialPrintBuffer);
-        sprintf(serialPrintBuffer, "                                                                                                      Right: %" PRId16 "\n", rightSpeed);
-        Serial.print(serialPrintBuffer);
-        sprintf(serialPrintBuffer, "                                                                                                                          Error: %" PRId16 "\n", currentError);
-        Serial.print(serialPrintBuffer);
-        sprintf(serialPrintBuffer, "Sensor Values: %" PRIu16 "\t%" PRIu16 "\t%" PRIu16 "\t%" PRIu16 "\t%" PRIu16 "\t%" PRIu16 "\n", sensorValues[0], sensorValues[1], sensorValues[2],
-                                                                                                                            sensorValues[3], sensorValues[4], sensorValues[5]);
-        Serial.print(serialPrintBuffer);
-      #endif
+
     #else
     switch (commands[commandCounter]) {                   
       case 'f': //FOLLOW LINE UNTIL SENSOR REACHES A CROSSROAD
@@ -261,7 +207,7 @@ void loop() {
             delay(50);
           }
           else {
-            if(commands[commandCounter + 1] == 'f') {
+            if(commandCounter != (numberOfCommands - 1) && commands[commandCounter + 1] == 'f') {
               driver.drive(cfg::k_forwardSpeed, cfg::k_forwardSpeed);
               delay(cfg::k_forwardDuration / 2);              
             }
@@ -272,9 +218,7 @@ void loop() {
             }
             junctionDoubleTestFlag = 0;
             commandCounter++;
-            #ifdef DEBUG_LED
-              leds.blueToggle();            
-            #endif
+            leds.blueToggle();            
           }
         } 
         else {
@@ -282,41 +226,28 @@ void loop() {
           PIDSpeedModifier = cfg::k_p * currentError + cfg::k_d * (currentError - lastError) / dT;
           driver.drive(cfg::k_base + PIDSpeedModifier, cfg::k_base - PIDSpeedModifier);
         }
-        #ifdef DEBUG_SERIAL
-          leftSpeed = cfg::k_base + PIDSpeedModifier;
-          rightSpeed = cfg::k_base - PIDSpeedModifier;
-          sprintf(serialPrintBuffer, "                                                                 Left: %" PRId16 "\n", leftSpeed);
-          Serial.print(serialPrintBuffer);
-          sprintf(serialPrintBuffer, "                                                                                                      Right: %" PRId16 "\n", rightSpeed);
-          Serial.print(serialPrintBuffer);
-          sprintf(serialPrintBuffer, "                                                                                                                          Error: %" PRId16 "\n", currentError);
-          Serial.print(serialPrintBuffer);
-          sprintf(serialPrintBuffer, "Sensor Values: %" PRIu16 "\t%" PRIu16 "\t%" PRIu16 "\t%" PRIu16 "\t%" PRIu16 "\t%" PRIu16 "\n", sensorValues[0], sensorValues[1], sensorValues[2],
-                                                                                                                              sensorValues[3], sensorValues[4], sensorValues[5]);
-          Serial.print(serialPrintBuffer);
-        #endif
         break;
       case 'r': //GO FORWARD FOR A WHILE THEN TURN RIGHT UNTIL SENSOR'S ON LINE AGAIN
-        if(!runOnceFlag) {
+        if(!turnRunOnceFlag) {
           driver.drive(cfg::k_forwardSpeed, cfg::k_forwardSpeed);
           delay(cfg::k_forwardDuration);
-          runOnceFlag = 1;
+          turnRunOnceFlag = 1;
         }
         driver.drive(cfg::k_turnRightSpeed, -cfg::k_turnRightSpeed);
         if((!lastOnLineFlag) && onLineFlag) {
-          runOnceFlag = 0;
+          turnRunOnceFlag = 0;
           commandCounter++;
         }
         break;
       case 'l': //GO FORWARD FOR A WHILE THEN TURN LEFT UNTIL SENSOR'S ON LINE AGAIN
-        if(!runOnceFlag) {
+        if(!turnRunOnceFlag) {
           driver.drive(cfg::k_forwardSpeed, cfg::k_forwardSpeed);
           delay(cfg::k_forwardDuration);
-          runOnceFlag = 1;
+          turnRunOnceFlag = 1;
         }
         driver.drive(-cfg::k_turnLeftSpeed, cfg::k_turnLeftSpeed);
         if((!lastOnLineFlag) && onLineFlag) {
-          runOnceFlag = 0;
+          turnRunOnceFlag = 0;
           commandCounter++;
         }
         break;
@@ -330,5 +261,19 @@ void loop() {
         commandCounter++;
         break;        
     }
+    
+    #ifdef DEBUG_SERIAL
+      leftSpeed = cfg::k_base + PIDSpeedModifier;
+      rightSpeed = cfg::k_base - PIDSpeedModifier;
+      sprintf(serialPrintBuffer, "                                                                 Left: %" PRId16 "\n", leftSpeed);
+      Serial.print(serialPrintBuffer);
+      sprintf(serialPrintBuffer, "                                                                                                      Right: %" PRId16 "\n", rightSpeed);
+      Serial.print(serialPrintBuffer);
+      sprintf(serialPrintBuffer, "                                                                                                                          Error: %" PRId16 "\n", currentError);
+      Serial.print(serialPrintBuffer);
+      sprintf(serialPrintBuffer, "Sensor Values: %" PRIu16 "\t%" PRIu16 "\t%" PRIu16 "\t%" PRIu16 "\t%" PRIu16 "\t%" PRIu16 "\n", sensorValues[0], sensorValues[1], sensorValues[2],
+                                                                                                                          sensorValues[3], sensorValues[4], sensorValues[5]);
+      Serial.print(serialPrintBuffer);
+      #endif
     #endif
 }

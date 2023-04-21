@@ -4,8 +4,6 @@
 #include <QTRSensors.h>
 
 #define aDEBUG_SERIAL
-#define DEBUG_LED
-#define aDEBUG_MOTOR
 #define aLOGI_TEST
 
 namespace cfg {
@@ -21,7 +19,7 @@ namespace cfg {
   static const int16_t k_forwardDuration = 580;
 
   static const uint8_t k_sensorCount = 6;
-  static const QTRReadMode k_readMode = QTRReadMode::On;
+  static const QTRReadMode k_readMode = QTRReadMode::OnAndOff;
 
   static const uint32_t k_lineColorTimeout = 250000;
 
@@ -56,10 +54,10 @@ namespace cfg {
     static const uint8_t rightMotorPWM = 5;
     static const uint8_t leftMotorPWM = 6;
 
+    static const uint8_t armUnoSS = 10;
+
     static const uint8_t nrfInterrupt = 3;
     static const uint8_t nrfSS = 4;
-
-    static const uint8_t armUnoSS = 10;
     static const uint8_t SPIMISO = 11;
     static const uint8_t SPIMOSI = 12;
     static const uint8_t SPIClock = 13;

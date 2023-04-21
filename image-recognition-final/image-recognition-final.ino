@@ -1,5 +1,4 @@
 #include "motorDriver.h"
-#include "debugLeds.h"
 #include "external.h"
 #include "config.h"
 
@@ -7,39 +6,43 @@
 #include <string.h>
 #include <inttypes.h>
 
-QTRSensors qtr = QTRSensors();
-uint16_t lastSensorValues[cfg::k_sensorCount] = { 0 };
 uint16_t sensorValues[cfg::k_sensorCount] = { 0 };
+QTRSensors qtr = QTRSensors();
 
 MotorDriver driver = MotorDriver(cfg::pins::leftMotor1, cfg::pins::leftMotor2, cfg::pins::leftMotorPWM, cfg::pins::rightMotor1, cfg::pins::rightMotor2, cfg::pins::rightMotorPWM);
-
-DebugLeds leds = DebugLeds(cfg::pins::redLED, cfg::pins::greenLED, cfg::pins::blueLED);
 
 namespace {
   uint32_t lastTime = 1;
   uint32_t currentTime = 2;
-  float dT = 1;
+  uint32_t dT = 1;
 
-  uint16_t position = 0;
-  float lastError = 0;
-  float currentError = 0;
+  int16_t position = 0;
+  int16_t lastError = 0;
+  int16_t currentError = 0;
 
-  float PIDSpeedModifier = 0.f;
+  int16_t PIDSpeedModifier = 0;
   #ifdef DEBUG_SERIAL
-    char* serialPrintBuffer = new char[100];
+    char* serialPrintBuffer = new char[250];
   #endif
 }
 
 namespace {
   uint16_t numberOfCommands;
-  char* commands = nullptr;
+  char commands[15] = { 'f', 'c', 'f', 'c', 'f', 'c', 'f', 'c', 
+                        'f', 'c', 'f', 'c', 'f', 'c', 'f', 'c', 'l',
+                        'f', 'f', 'f', 'f', 'f', 'f', 'f', 'f', 's' };
   uint16_t commandCounter = 0;
-  
-  uint8_t lastLineColorFlag = 1;
-  uint8_t lineColorFlag = 1; //0 FOR BLACK, 1 FOR WHITE
 
-  uint8_t lastOnLineFlag = 1;
-  uint8_t onLineFlag = 1;
+  volatile uint8_t lastLineColorFlag = 1;
+  volatile uint8_t lineColorFlag = 1; //0 FOR BLACK, 1 FOR WHITE
+  volatile uint32_t lineColorTime = 1;
+
+  volatile uint8_t lastOnLineFlag = 1;
+  volatile uint8_t onLineFlag = 1;
+
+  uint8_t turnRunOnceFlag = 0;
+
+  uint8_t junctionDoubleTestFlag = 0;
 }
 
 void setup() {
@@ -56,6 +59,7 @@ void setup() {
     pinMode(cfg::pins::rightMotorPWM, OUTPUT);
 
     pinMode(cfg::pins::nrfInterrupt, INPUT);
+    pinMode(cfg::pins::nrfInterrupt, INPUT);
     pinMode(cfg::pins::nrfSS, OUTPUT);
     pinMode(cfg::pins::SPIClock, OUTPUT);
     pinMode(cfg::pins::SPIMISO, INPUT);
@@ -63,10 +67,11 @@ void setup() {
 
   //START SERIAL CONNECTION
     Serial.begin(cfg::k_serialBaudRate);
+    while(!Serial) {}
 
   //SETUP MOTOR DRIVER
     driver.drive(0, 0);
-    #ifdef DEBUG_LED
+    #ifdef DEBUG_MOTOR
       driver.drive(250, 250);
       delay(500);
       driver.drive(-250, -250);
@@ -77,6 +82,7 @@ void setup() {
       delay(500);
       driver.drive(0, 0);
     #endif
+
   //SETUP & CALIBRATE QTR
     #ifdef DEBUG_SERIAL
       Serial.println("QTR calibrating...");
@@ -84,11 +90,10 @@ void setup() {
     qtr.setTypeAnalog();
     qtr.setEmitterPin(cfg::pins::emitter);
     qtr.setSensorPins(cfg::pins::qtr, cfg::k_sensorCount);
-    /* TO DO
     for(uint8_t i = 0; i < cfg::k_calibrationWiggleCount; i++) {
       lastTime = millis();
       driver.drive(-cfg::k_calibrationMoveSpeed, cfg::k_calibrationMoveSpeed);
-      while((millis() - lastTime) / 1.5f < cfg::k_calibrationMoveDuration) {
+      while((millis() - lastTime) < cfg::k_calibrationMoveDuration / 2.f) {
         qtr.calibrate(cfg::k_readMode);
       }
       lastTime = millis();
@@ -98,52 +103,61 @@ void setup() {
       }
       lastTime = millis();
       driver.drive(-cfg::k_calibrationMoveSpeed, cfg::k_calibrationMoveSpeed);
-      while((millis() - lastTime) / 1.5f < cfg::k_calibrationMoveDuration) {
+      while((millis() - lastTime) < cfg::k_calibrationMoveDuration / 2) {
         qtr.calibrate(cfg::k_readMode);
       }
+      driver.drive(0, 0);
     }
-    */
-    for(uint8_t i = 0; i < 100; i++) {
-      qtr.calibrate(cfg::k_readMode);
-    }      
     #ifdef DEBUG_SERIAL
       Serial.println("QTR calibrated.");
     #endif
-  
-
 }
 
 void loop() {
   //TIME
     lastTime = currentTime;
     currentTime = micros();
-    dT = static_cast<float>(currentTime - lastTime) / 1000000;
+    dT = currentTime - lastTime;
 
   //POSITION & LINE COLOR
-    memcpy(&lastSensorValues, &sensorValues, 2 * cfg::k_sensorCount);
     position = (lineColorFlag) ? qtr.readLineWhite(sensorValues, cfg::k_readMode) : qtr.readLineBlack(sensorValues, cfg::k_readMode);
-    //ON BLACK LINE IF LAST 2 READINGS WERE BLACK ONLY IN THE MIDDLE && CONVERSE IS TRUE IF OTHER WAY AROUND
-    if(lastSensorValues[0] + sensorValues[0] < 100 && lastSensorValues[1] + sensorValues[1] < 100 && lastSensorValues[4] + sensorValues[4] < 100 && lastSensorValues[5] + sensorValues[5] < 100 && sensorValues[2] > 800 && lastSensorValues[2] > 800 && sensorValues[3] > 800 && lastSensorValues[3] > 800) {
+    lastLineColorFlag = lineColorFlag;
+    if(sensorValues[0] < 300 && ((sensorValues[1] < 300 && sensorValues[2] < 300 && sensorValues[3] > 700 && sensorValues[4] > 700) || 
+                                 (sensorValues[1] > 700 && sensorValues[2] > 700 && sensorValues[3] < 300 && sensorValues[4] < 300) || 
+                                 (sensorValues[1] < 300 && sensorValues[2] > 700 && sensorValues[3] > 700 && sensorValues[4] < 300 )) && sensorValues[5] < 300) {
       if(lastLineColorFlag) {
         lineColorFlag = 0;
-        position = (lineColorFlag) ? qtr.readLineWhite(sensorValues, cfg::k_readMode) : qtr.readLineBlack(sensorValues, cfg::k_readMode);
+        position = qtr.readLineBlack(sensorValues, cfg::k_readMode);
       }
     }
-    else if (lastSensorValues[0] + sensorValues[0] > 1800 && lastSensorValues[1] + sensorValues[1] > 1800 && lastSensorValues[4] + sensorValues[4] > 1800 && lastSensorValues[5] + sensorValues[5] > 1800 && sensorValues[2] < 200 && lastSensorValues[2] < 200 && sensorValues[3] < 200 && lastSensorValues[3] < 200) {
+    else if(sensorValues[0] > 700 && ((sensorValues[1] > 700 && sensorValues[2] > 700 && sensorValues[3] < 300 && sensorValues[4] < 300) || 
+                                      (sensorValues[1] < 300 && sensorValues[2] < 300 && sensorValues[3] > 700 && sensorValues[4] > 700) || 
+                                      (sensorValues[1] > 700 && sensorValues[2] < 300 && sensorValues[3] < 300 && sensorValues[4] > 700)) && sensorValues[5] > 700) {
       if(!lastLineColorFlag) {
         lineColorFlag = 1;
-        position = (lineColorFlag) ? qtr.readLineWhite(sensorValues, cfg::k_readMode) : qtr.readLineBlack(sensorValues, cfg::k_readMode);
+        position = qtr.readLineWhite(sensorValues, cfg::k_readMode);
       }
     }
-    #ifdef DEBUG_LED
-      if(lastLineColorFlag != lineColorFlag) {
-        leds.redToggle();              
+    if(lineColorFlag) {
+      for(uint8_t i = 0; i < cfg::k_sensorCount; i++) {
+        sensorValues[i] = 1000 - sensorValues[i];
       }
-    #endif
-    #ifdef DEBUG_SERIAL
-      sprintf(serialPrintBuffer, "Sensor Values: %" PRIu16 "\t%" PRIu16 "\t%" PRIu16 "\t%" PRIu16 "\t%" PRIu16 "\t%" PRIu16 "\n", sensorValues[0], sensorValues[1], sensorValues[2],
-                                                                                                                                  sensorValues[3], sensorValues[4], sensorValues[5]);
-      Serial.print(serialPrintBuffer);
-    #endif    
+    }
+    if(lastLineColorFlag != lineColorFlag) {
+      lineColorTime = micros() - 1;           
+    }
 
+  // ERROR & IS ON LINE
+    lastError = currentError;
+    currentError = position - ((cfg::k_sensorCount - 1) * 500);
+    lastOnLineFlag = onLineFlag;
+    if((sensorValues[2] > 500 && sensorValues[3] > 300) || (sensorValues[2] > 300 && sensorValues[3] > 500)) {
+      onLineFlag = 1;
+      leds.greenOn();
+    }
+    else {
+      onLineFlag = 0;
+      leds.greenOff();
+    }
+  //
 }

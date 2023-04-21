@@ -5,10 +5,10 @@
 
 #include <string.h>
 
-uint16_t GetCommandsWithNRF(char** commands) {
-    *(commands) = new char[6];
+uint16_t getCommandsWithNRF(char** commandsPtr) {
+    *(commandsPtr) = new char[6];
     char buffer[] = "ffrffrfrffls";
-    memcpy(*(commands), buffer, 13);  
+    memcpy(*(commandsPtr), buffer, 13);  
     return 13;
 }
 

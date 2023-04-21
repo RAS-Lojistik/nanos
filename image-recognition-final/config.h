@@ -3,8 +3,8 @@
 
 #include <QTRSensors.h>
 
-#define DEBUG_SERIAL
-#define DEBUG_LED
+#define aDEBUG_SERIAL
+#define aLOGI_TEST
 
 namespace cfg {
   static const float k_base = 120;
@@ -28,24 +28,23 @@ namespace cfg {
   static const uint32_t k_serialBaudRate = 115200;
 
   namespace pins {
-    static const uint8_t emitter = 12;
-    static const uint8_t qtr[] = {A0, A1, A2, A3, A4, A5};
+    static const uint8_t emitter = A7;
+    static const uint8_t qtr[] = { A1, A2, A3, A4, A5, A6 };
 
-    static const uint8_t redLED = -1;
-    static const uint8_t greenLED = -1;
-    static const uint8_t blueLED = -1;
+    static const uint8_t button = 2;
     
-    static const uint8_t leftMotor1 = 8;
-    static const uint8_t leftMotor2 = 8;
-    static const uint8_t leftMotorPWM = 10;
-    static const uint8_t rightMotor1 = 8;
+    static const uint8_t leftMotor1 = 5;
+    static const uint8_t leftMotor2 = 4;
+    static const uint8_t leftMotorPWM = 6;
+    static const uint8_t rightMotor1 = 7;
     static const uint8_t rightMotor2 = 8;
     static const uint8_t rightMotorPWM = 9;
 
+    static const uint8_t nrfEnable = A0;
     static const uint8_t nrfInterrupt = 3;
     static const uint8_t nrfSS = 10;
-    static const uint8_t SPIMISO = 11;
-    static const uint8_t SPIMOSI = 12;
+    static const uint8_t SPIMISO = 12;
+    static const uint8_t SPIMOSI = 11;
     static const uint8_t SPIClock = 13;
   }
 }
