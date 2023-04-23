@@ -10,11 +10,11 @@
 
 uint16_t getCommandsWithNRF(char** commandsPtr) {
   #ifndef NRF_ACTIVE
-    char buffer[] = "frflfrfrfffrfls";
-    const uint8_t bufferSize = 15;
+    char buffer[] = "frffrfrflfrfrflffffrffffflffffrffrflfflffffrrfflfrflfrflflfrflfrfrrffrflfrfrflflfrfflffrfls";
+    const uint8_t bufferSize = 92;
 
     char* commandsArray = new char[bufferSize];
-    memcpy(commandsArray, buffer, bufferSize);  
+    memcpy(commandsArray, buffer, bufferSize);
     *(commandsPtr) = commandsArray;
     return bufferSize;
   #else

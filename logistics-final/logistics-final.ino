@@ -71,6 +71,8 @@ void setup() {
       pinMode(cfg::pins::leftMotorPWM, OUTPUT);
       pinMode(cfg::pins::rightMotorPWM, OUTPUT);
 
+      pinMode(cfg::pins::laser, INPUT);
+
       pinMode(cfg::pins::nrfInterrupt, INPUT);
       pinMode(cfg::pins::nrfSS, OUTPUT);
       digitalWrite(cfg::pins::nrfSS, HIGH);
@@ -190,7 +192,6 @@ void loop() {
   //ERROR & IS ON LINE
     lastError = currentError;
     currentError = position - ((cfg::k_sensorCount - 1) * 500);
-
     lastOnLineFlag = onLineFlag;
     if(abs(position - 2500) < 500) {
       onLineFlag = 1;
@@ -214,7 +215,7 @@ void loop() {
             if(!junctionDoubleTestFlag) {
               junctionDoubleTestFlag = 1;
               driver.drive(cfg::k_base, cfg::k_base);
-              delay(20);
+              delay(60);
             }
             else {
               if(commands[commandCounter + 1] == 'f') {

@@ -30,9 +30,7 @@ namespace {
 
 namespace {
   uint16_t numberOfCommands = 25;
-  char commands[] = { 'f', 'c', 'f', 'c', 'f', 'c', 'f', 'c', 
-                        'f', 'c', 'f', 'c', 'f', 'c', 'f', 'c', 'l',
-                        'f', 'f', 'f', 'f', 'f', 'f', 'f', 'f' };
+  char commands[] = { 'f', 'f','f','l', 's' };
   uint16_t commandCounter = 0;
 
   volatile uint8_t lastLineColorFlag = 1;
@@ -105,12 +103,13 @@ void setup() {
       Serial.println("QTR calibrated.");
     #endif
 
-  //AWAIT BUTTON PRESS
+  //WAIT BUTTON PRESS
     while(digitalRead(cfg::pins::button)) { }
     delay(1500);
 }
 
 void loop() {
+  int bdry_qtr = 300;
   //TIME
     lastTime = currentTime;
     currentTime = micros();
@@ -120,30 +119,18 @@ void loop() {
     position = (lineColorFlag) ? qtr.readLineWhite(sensorValues, cfg::k_readMode) : qtr.readLineBlack(sensorValues, cfg::k_readMode);
 
     lastLineColorFlag = lineColorFlag;
-    if(sensorValues[0] < 400 && ((sensorValues[1] < 300 && sensorValues[2] < 300 && sensorValues[3] > 700 && sensorValues[4] > 700) || 
-                                 (sensorValues[1] > 700 && sensorValues[2] > 700 && sensorValues[3] < 300 && sensorValues[4] < 300) ||
-                                 (sensorValues[1] < 300 && sensorValues[2] > 700 && sensorValues[3] > 700 && sensorValues[4] > 700) ||
-                                 (sensorValues[1] > 700 && sensorValues[2] > 700 && sensorValues[3] > 700 && sensorValues[4] < 300) ||
-                                 (sensorValues[1] < 300 && sensorValues[2] > 700 && sensorValues[3] > 700 && sensorValues[4] < 300 )) && sensorValues[5] < 400) {
+    // IF BLACK LINE (WHITE -> BLACK)
+    if(sensorValues[0] < bdry_qtr && sensorValues[5] < bdry_qtr) {
       if(lastLineColorFlag) {
         lineColorFlag = 0;
         position = qtr.readLineBlack(sensorValues, cfg::k_readMode);
       }
     }
-    else if(sensorValues[0] > 400 && ((sensorValues[1] > 700 && sensorValues[2] > 700 && sensorValues[3] < 300 && sensorValues[4] < 300) || 
-                                      (sensorValues[1] < 300 && sensorValues[2] < 300 && sensorValues[3] > 700 && sensorValues[4] > 700) ||
-                                      (sensorValues[1] > 700 && sensorValues[2] < 300 && sensorValues[3] < 300 && sensorValues[4] < 300) ||
-                                      (sensorValues[1] < 300 && sensorValues[2] < 300 && sensorValues[3] < 300 && sensorValues[4] > 700) ||
-                                      (sensorValues[1] > 700 && sensorValues[2] < 300 && sensorValues[3] < 300 && sensorValues[4] > 700)) && sensorValues[5] > 400) {
+    // IF WHITE LINE (BLACK -> WHITE)
+    else if(sensorValues[0] > 1000-bdry_qtr && sensorValues[5] > 1000-bdry_qtr) {
       if(!lastLineColorFlag) {
         lineColorFlag = 1;
         position = qtr.readLineWhite(sensorValues, cfg::k_readMode);
-      }
-    }
-    
-    if(lineColorFlag) {
-      for(uint8_t i = 0; i < cfg::k_sensorCount; i++) {
-        sensorValues[i] = 1000 - sensorValues[i];
       }
     }
 
@@ -168,13 +155,13 @@ void loop() {
     #else
       switch (commands[commandCounter]) {                   
         case 'f': //FOLLOW LINE UNTIL SENSOR REACHES A CROSSROAD
-          if(sensorValues[0] < 300 && (sensorValues[2] > 450 && sensorValues[3] > 450) && (sensorValues[4] > 450 && sensorValues[5] > 450)) {
-            if(!junctionDoubleTestFlag) {
-              junctionDoubleTestFlag = 1;
-              driver.drive(cfg::k_base, cfg::k_base);
-              delay(45);
-            }
-            else {
+          if(sensorValues[0] < bdry_qtr && sensorValues[4] > 1000-bdry_qtr && sensorValues[5] > 1000-bdry_qtr) {
+            //if(!junctionDoubleTestFlag) {
+              //junctionDoubleTestFlag = 1;
+              driver.drive(cfg::k_base, cfg::k_base*2);
+              delay(50);
+            //}
+            /*else {
               if(commands[commandCounter + 1] == 'f') {
                 driver.drive(cfg::k_base, cfg::k_base);
                 delay(250);              
@@ -186,12 +173,18 @@ void loop() {
               }
               junctionDoubleTestFlag = 0;
               commandCounter++;
-            }
+            }*/
+              driver.drive(0, 0);
+              // WAIT FOR OCR
+              serialCom();
+              //while(1) { }
+              commandCounter++;
+              break;   
           } 
           else {
-            junctionDoubleTestFlag = 0;
+            //junctionDoubleTestFlag = 0;
             PIDSpeedModifier = cfg::k_p * currentError + cfg::k_d * (currentError - lastError) / dT;
-            PIDSpeedModifier = constrain(PIDSpeedModifier, -35, 35);
+            PIDSpeedModifier = constrain(PIDSpeedModifier, -15, 15);
             if(lastLineColorFlag != lineColorFlag){
               driver.drive(cfg::k_base, cfg::k_base);
               if (lineColorFlag){
@@ -208,32 +201,33 @@ void loop() {
               //delay(25);
             }
             else {
-            driver.drive(cfg::k_base + PIDSpeedModifier, cfg::k_base - PIDSpeedModifier);
+              driver.drive(cfg::k_base + PIDSpeedModifier, cfg::k_base - PIDSpeedModifier);
             }
           }
           break;
         case 'l': //GO FORWARD FOR A WHILE THEN TURN LEFT UNTIL SENSOR'S ON LINE AGAIN
-          if(!turnRunOnceFlag) {
-            driver.drive(cfg::k_forwardSpeed, cfg::k_forwardSpeed);
-            delay(cfg::k_forwardDuration);
-            turnRunOnceFlag = 1;
-          }
           driver.drive(-cfg::k_turnLeftSpeed, cfg::k_turnLeftSpeed);
           if((!lastOnLineFlag) && onLineFlag) {
-            turnRunOnceFlag = 0;
             commandCounter++;
           }
           break;
 
         case 's':
-          driver.drive(0, 0);
-          delay(1000);
+          if(!lastLineColorFlag && lineColorFlag) {
+              driver.drive(cfg::k_base, cfg::k_base);
+              delay(1000);
+              driver.drive(0, 0);
+              while(1) { }
+          } else {
+          PIDSpeedModifier = cfg::k_p * currentError + cfg::k_d * (currentError - lastError) / dT;
+          PIDSpeedModifier = constrain(PIDSpeedModifier, -15, 15);
+          driver.drive(cfg::k_base + PIDSpeedModifier, cfg::k_base - PIDSpeedModifier);
+          }
           /* char* path = nullptr;
           uint16_t pathSize = getPathFromPi(&path);
           sendCommandsWithNRF(path, pathSize);
           */
-          while(1) { }
-          break;        
+          break;    
       }
     #endif
     #ifdef DEBUG_SERIAL
@@ -249,4 +243,19 @@ void loop() {
                                                                                                                           sensorValues[3], sensorValues[4], sensorValues[5]);
       Serial.print(serialPrintBuffer);
     #endif
+}
+
+void serialCom() {
+  Serial.write(100);
+  
+  uint8_t responded = 0;
+  while(!responded) {
+    if(Serial.available()) {
+      String data = Serial.readStringUntil('\n');
+      if(data == "move") {
+        responded = 1;
+        Serial.write(45);
+      }
+    }
+  }
 }
