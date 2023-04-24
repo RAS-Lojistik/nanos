@@ -9,7 +9,7 @@ volatile uint8_t SPIReceive = 255;
 
 uint8_t armState = 0; //0 for lowered, 1 for up
 
-Servo myservo;
+Servo myServo;
 Stepper stepper(2038, 5, 7, 6, 8);
 
 ISR(SPI_STC_vect) {
@@ -25,12 +25,10 @@ void setup() {
  
   pinMode(2, OUTPUT);
 
-  myservo.attach(2);
+  myServo.attach(2);
   stepper.setSpeed(15);
 
-  stepper.step(400);
-  delay(1500);
-  myservo.write(40);
+  myServo.write(40);
 }
 
 void loop() {
@@ -42,25 +40,22 @@ void loop() {
     down_and_loose();
     armState = 0;
   }
-
-  
 }
-
 
 void grab_and_up() {
   stepper.step(-400);
   delay(800);
-  myservo.write(120);
+  myServo.write(115);
   delay(800);
-  stepper.step(400);
+  stepper.step(650);
   delay(800);
 }
 
 void down_and_loose() {
   stepper.step(-400);
   delay(800);
-  myservo.write(40);
+  myServo.write(40);
   delay(800);
-  stepper.step(400);
+  stepper.step(650);
   delay(800);
 }

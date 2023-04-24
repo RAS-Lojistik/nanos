@@ -54,6 +54,9 @@ namespace {
   uint8_t turnRunOnceFlag = 0;
 
   uint8_t junctionDoubleTestFlag = 0;
+
+  uint32_t PDForwardTimer = 700;
+  uint8_t pickedUpFlag = 0;
 }
 
 void setup() {
@@ -70,8 +73,6 @@ void setup() {
 
       pinMode(cfg::pins::leftMotorPWM, OUTPUT);
       pinMode(cfg::pins::rightMotorPWM, OUTPUT);
-
-      pinMode(cfg::pins::laser, INPUT);
 
       pinMode(cfg::pins::nrfInterrupt, INPUT);
       pinMode(cfg::pins::nrfSS, OUTPUT);
@@ -107,7 +108,7 @@ void setup() {
       for(uint8_t i = 0; i < cfg::k_calibrationWiggleCount; i++) {
         lastTime = millis();
         driver.drive(-cfg::k_calibrationMoveSpeed, cfg::k_calibrationMoveSpeed);
-        while((millis() - lastTime) < cfg::k_calibrationMoveDuration / 2.f) {
+        while((millis() - lastTime) < cfg::k_calibrationMoveDuration / 2) {
           qtr.calibrate(cfg::k_readMode);
         }
         lastTime = millis();
@@ -204,10 +205,14 @@ void loop() {
 
   //STATE MACHINE
     #ifdef LOGI_TEST
-      spi.writeToSlave(cfg::k_armPickUpWord, cfg::pins::armNanoSS);
-      delay(7000);
-      spi.writeToSlave(cfg::k_armDropWord, cfg::pins::armNanoSS);
-      delay(7000);
+      driver.drive(200, 200);
+      delay(3000);
+      driver.drive(-200, -200);
+      delay(3000);
+      driver.drive(-200, 200);
+      delay(3000);
+      driver.drive(200, -200);
+      delay(3000);
     #else
       switch (commands[commandCounter]) {                   
         case 'f': //FOLLOW LINE UNTIL SENSOR REACHES A CROSSROAD
@@ -283,17 +288,46 @@ void loop() {
           }
           break;
         case 'p': //MOVE FORWARD UNTIL LASER IS TRIGGERED. THEN PICKUP THE CUBE, MOVE BACK & TURN AROUND.
-          spi.writeToSlave(cfg::k_armPickUpWord, cfg::pins::armNanoSS);
-          delay(3000);
+          if(!turnRunOnceFlag) {
+            turnRunOnceFlag = 1;
+            PDForwardTimer = millis();
+          }
+          if(!pickedUpFlag) {
+            if(millis() - PDForwardTimer < cfg::k_PDForwardTimeout) {
+              PIDSpeedModifier = cfg::k_p * currentError + cfg::k_d * (currentError - lastError) / dT;
+              PIDSpeedModifier = constrain(PIDSpeedModifier, -35, 35);
+              driver.drive(cfg::k_base * 0.6 + PIDSpeedModifier, cfg::k_base * 0.6 - PIDSpeedModifier);
+            } 
+            else {
+              driver.drive(0, 0);
+              spi.writeToSlave(cfg::k_armPickUpWord, cfg::pins::armNanoSS);
+              delay(3000);
+              pickedUpFlag = 1;
+            }
+          }
+          else {
+            driver.drive(cfg::k_turnRightSpeed, -cfg::k_turnRightSpeed);
+            if(!lastOnLineFlag && onLineFlag) {
+              turnRunOnceFlag = 0;
+              driver.drive(0, 0);
+              commandCounter++;
+            }
+          }
           break;
         case 'd':
           spi.writeToSlave(cfg::k_armDropWord, cfg::pins::armNanoSS);
           delay(3000);
           break;
         case 's':
-          driver.drive(0, 0);
-          delay(5000);
-          commandCounter++;
+          if(!(!lastLineColorFlag && lineColorFlag)) {
+            
+          }
+          else {
+            driver.drive(cfg::k_base, cfg::k_base);
+            delay(1500);
+            driver.drive(0, 0);
+            while(1) {}
+          }
           break;
       }
     #endif

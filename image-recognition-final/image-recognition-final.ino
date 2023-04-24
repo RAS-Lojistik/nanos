@@ -103,13 +103,13 @@ void setup() {
       Serial.println("QTR calibrated.");
     #endif
 
-  //WAIT BUTTON PRESS
+  //AWAIT BUTTON PRESS
     while(digitalRead(cfg::pins::button)) { }
     delay(1500);
 }
 
 void loop() {
-  int bdry_qtr = 300;
+    int bdry_qtr = 300;
   //TIME
     lastTime = currentTime;
     currentTime = micros();
@@ -127,6 +127,7 @@ void loop() {
       }
     }
     // IF WHITE LINE (BLACK -> WHITE)
+
     else if(sensorValues[0] > 1000-bdry_qtr && sensorValues[5] > 1000-bdry_qtr) {
       if(!lastLineColorFlag) {
         lineColorFlag = 1;
@@ -201,7 +202,7 @@ void loop() {
               //delay(25);
             }
             else {
-              driver.drive(cfg::k_base + PIDSpeedModifier, cfg::k_base - PIDSpeedModifier);
+            driver.drive(cfg::k_base + PIDSpeedModifier, cfg::k_base - PIDSpeedModifier);
             }
           }
           break;
@@ -217,17 +218,17 @@ void loop() {
               driver.drive(cfg::k_base, cfg::k_base);
               delay(1000);
               driver.drive(0, 0);
+              delay(1000);
+              char* path = nullptr;
+              uint8_t pathSize = getPathFromPi(&path);
+              sendCommandsWithNRF(path,pathSize);
               while(1) { }
           } else {
           PIDSpeedModifier = cfg::k_p * currentError + cfg::k_d * (currentError - lastError) / dT;
           PIDSpeedModifier = constrain(PIDSpeedModifier, -15, 15);
           driver.drive(cfg::k_base + PIDSpeedModifier, cfg::k_base - PIDSpeedModifier);
           }
-          /* char* path = nullptr;
-          uint16_t pathSize = getPathFromPi(&path);
-          sendCommandsWithNRF(path, pathSize);
-          */
-          break;    
+          break;        
       }
     #endif
     #ifdef DEBUG_SERIAL
@@ -243,19 +244,4 @@ void loop() {
                                                                                                                           sensorValues[3], sensorValues[4], sensorValues[5]);
       Serial.print(serialPrintBuffer);
     #endif
-}
-
-void serialCom() {
-  Serial.write(100);
-  
-  uint8_t responded = 0;
-  while(!responded) {
-    if(Serial.available()) {
-      String data = Serial.readStringUntil('\n');
-      if(data == "move") {
-        responded = 1;
-        Serial.write(45);
-      }
-    }
-  }
 }

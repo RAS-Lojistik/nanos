@@ -3,9 +3,9 @@
 
 #include <QTRSensors.h>
 
-#define DEBUG_SERIAL
+#define aDEBUG_SERIAL
 #define aLOGI_TEST
-#define aNRF_ACTIVE
+#define NRF_ACTIVE
 
 namespace cfg {
   static const int16_t k_base = 55;
@@ -14,17 +14,17 @@ namespace cfg {
 
   static const float k_onLineThreshold = 0.4f;
 
-  static const int16_t k_turnRightSpeed = 35; //DURATION 750 FOR 90 DEGREES
-  static const int16_t k_turnLeftSpeed = 35;
+  static const int16_t k_turnRightSpeed = 40; //DURATION 750 FOR 90 DEGREES
+  static const int16_t k_turnLeftSpeed = 40;
   static const int16_t k_forwardSpeed = 40;
   static const int16_t k_forwardDuration = 480;
 
-  static const uint32_t k_lineColorTimeout = 250000;
+  static const uint32_t k_PDForwardTimeout = 700;
 
   static const uint8_t k_sensorCount = 6;
   static const QTRReadMode k_readMode = QTRReadMode::On;
   static const uint16_t k_calibrationMoveDuration = 1300;
-  static const uint16_t k_calibrationMoveSpeed = 35;
+  static const uint16_t k_calibrationMoveSpeed = 45;
   static const uint8_t k_calibrationWiggleCount = 2;
 
   static const uint32_t k_serialBaudRate = 115200;
@@ -53,8 +53,6 @@ namespace cfg {
 
     static const uint8_t rightMotorPWM = 5;
     static const uint8_t leftMotorPWM = 6;
-
-    static const uint8_t laser = 2;
 
     static const uint8_t armNanoSS = 10;
 
