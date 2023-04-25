@@ -51,12 +51,13 @@ namespace {
   volatile uint8_t lastOnLineFlag = 1;
   volatile uint8_t onLineFlag = 1;
 
-  uint8_t turnRunOnceFlag = 0;
+  uint8_t runOnceFlag = 0;
 
-  uint8_t junctionDoubleTestFlag = 0;
-
-  uint32_t PDForwardTimer = 700;
+  uint32_t PDForwardTime = 700;
   uint8_t pickedUpFlag = 0;
+
+  uint32_t junctionTestTime = 0;
+  uint8_t junctionTestFlag = 0;
 }
 
 void setup() {
@@ -160,21 +161,13 @@ void loop() {
     position = (lineColorFlag) ? qtr.readLineWhite(sensorValues, cfg::k_readMode) : qtr.readLineBlack(sensorValues, cfg::k_readMode);
 
     lastLineColorFlag = lineColorFlag;
-    if(sensorValues[0] < 700 && ((sensorValues[1] < 300 && sensorValues[2] < 300 && sensorValues[3] > 700 && sensorValues[4] > 700) || 
-                                 (sensorValues[1] > 700 && sensorValues[2] > 700 && sensorValues[3] < 300 && sensorValues[4] < 300) ||
-                                 (sensorValues[1] < 300 && sensorValues[2] > 700 && sensorValues[3] > 700 && sensorValues[4] > 700) ||
-                                 (sensorValues[1] > 700 && sensorValues[2] > 700 && sensorValues[3] > 700 && sensorValues[4] < 300) ||
-                                 (sensorValues[1] < 300 && sensorValues[2] > 700 && sensorValues[3] > 700 && sensorValues[4] < 300 )) && sensorValues[5] < 700) {
+    if(sensorValues[0] < 500 && (sensorValues[2] > 500 || sensorValues[3] > 500) && sensorValues[5] < 500) {
       if(lastLineColorFlag) {
         lineColorFlag = 0;
         position = qtr.readLineBlack(sensorValues, cfg::k_readMode);
       }
     }
-    else if(sensorValues[0] > 300 && ((sensorValues[1] > 700 && sensorValues[2] > 700 && sensorValues[3] < 300 && sensorValues[4] < 300) || 
-                                      (sensorValues[1] < 300 && sensorValues[2] < 300 && sensorValues[3] > 700 && sensorValues[4] > 700) ||
-                                      (sensorValues[1] > 700 && sensorValues[2] < 300 && sensorValues[3] < 300 && sensorValues[4] < 300) ||
-                                      (sensorValues[1] < 300 && sensorValues[2] < 300 && sensorValues[3] < 300 && sensorValues[4] > 700) ||
-                                      (sensorValues[1] > 700 && sensorValues[2] < 300 && sensorValues[3] < 300 && sensorValues[4] > 700)) && sensorValues[5] > 300) {
+    else if(sensorValues[0] > 500 && (sensorValues[2] < 500 || sensorValues[3] < 500) && sensorValues[5] > 500) {
       if(!lastLineColorFlag) {
         lineColorFlag = 1;
         position = qtr.readLineWhite(sensorValues, cfg::k_readMode);
@@ -187,6 +180,7 @@ void loop() {
       }
     }
     if(lastLineColorFlag != lineColorFlag) {
+      junctionTestFlag = 0;
       leds.redToggle();
     }
 
@@ -194,7 +188,7 @@ void loop() {
     lastError = currentError;
     currentError = position - ((cfg::k_sensorCount - 1) * 500);
     lastOnLineFlag = onLineFlag;
-    if(abs(position - 2500) < 500) {
+    if(abs(currentError) < 300) {
       onLineFlag = 1;
       leds.greenOn();
     }
@@ -205,126 +199,109 @@ void loop() {
 
   //STATE MACHINE
     #ifdef LOGI_TEST
-      driver.drive(200, 200);
-      delay(3000);
-      driver.drive(-200, -200);
-      delay(3000);
-      driver.drive(-200, 200);
-      delay(3000);
-      driver.drive(200, -200);
-      delay(3000);
     #else
-      switch (commands[commandCounter]) {                   
+      switch (commands[commandCounter]) {
         case 'f': //FOLLOW LINE UNTIL SENSOR REACHES A CROSSROAD
-          if((sensorValues[2] > 300 && sensorValues[3] > 300) && ((sensorValues[0] > 300 && sensorValues[1] > 300) || (sensorValues[4] > 300 && sensorValues[5] > 300))) {
-            if(!junctionDoubleTestFlag) {
-              junctionDoubleTestFlag = 1;
-              driver.drive(cfg::k_base, cfg::k_base);
-              delay(60);
+          if((sensorValues[2] > 500 && sensorValues[3] > 500) && ((sensorValues[0] > 500 && sensorValues[1] > 500) || (sensorValues[4] > 500 && sensorValues[5] > 500))) {
+            if (!junctionTestFlag) {
+              junctionTestTime = millis();
+              junctionTestFlag = 1;
             }
             else {
-              if(commands[commandCounter + 1] == 'f') {
-                driver.drive(cfg::k_base, cfg::k_base);
-                delay(250);              
+              if((millis() - junctionTestTime < 85)) {   //INCREASE JUNCTION TEST TIME WHEN LINE COLOR CHANGE CAUSES ISSUES   : 75ms at 3.8V
+                driver.drive(cfg::k_base, cfg::k_base);  //DECREASE IF JUNCTIONS ARE SKIPPED 
               }
               else {
-                driver.drive(-200, -200);
-                delay(35);
-                driver.drive(0, 0);            
+                if(commands[commandCounter + 1] == 'f') {
+                  driver.drive(cfg::k_base, cfg::k_base);
+                  delay(300);              
+                }
+                else {
+                  driver.drive(0, 0);            
+                }
+                commandCounter++;
+                leds.blueToggle(); 
+                junctionTestFlag = 0;
               }
-              junctionDoubleTestFlag = 0;
-              commandCounter++;
-              leds.blueToggle();            
+              
             }
           } 
           else {
-            junctionDoubleTestFlag = 0;
+            junctionTestFlag = 0;
             PIDSpeedModifier = cfg::k_p * currentError + cfg::k_d * (currentError - lastError) / dT;
             PIDSpeedModifier = constrain(PIDSpeedModifier, -35, 35);
-            if(!(lastLineColorFlag == lineColorFlag)){
-              driver.drive(cfg::k_base, cfg::k_base);
-              if (lineColorFlag){
-                position = qtr.readLineWhite(sensorValues, cfg::k_readMode);
-                for(uint8_t i = 0; i < cfg::k_sensorCount; i++) {
-                  sensorValues[i] = 1000 - sensorValues[i];
-                }
-                //delay(25);
-                break;
-              }
-              else {
-                position = qtr.readLineBlack(sensorValues, cfg::k_readMode);
-              }
-              //delay(25);
-            }
-            else {
             driver.drive(cfg::k_base + PIDSpeedModifier, cfg::k_base - PIDSpeedModifier);
-            }
           }
           break;
         case 'r': //GO FORWARD FOR A WHILE. THEN TURN RIGHT UNTIL SENSOR'S ON LINE AGAIN
-          if(!turnRunOnceFlag) {
+          if(!runOnceFlag) {
             driver.drive(cfg::k_forwardSpeed, cfg::k_forwardSpeed);
             delay(cfg::k_forwardDuration);
-            turnRunOnceFlag = 1;
+            runOnceFlag = 1;
             driver.drive(cfg::k_turnRightSpeed, -cfg::k_turnRightSpeed);
-            delay(700);
+            delay(400);
           }
           driver.drive(cfg::k_turnRightSpeed, -cfg::k_turnRightSpeed);
           if((!lastOnLineFlag) && onLineFlag) {
-            turnRunOnceFlag = 0;
+            runOnceFlag = 0;
             commandCounter++;
           }
           break;
         case 'l': //GO FORWARD FOR A WHILE. THEN TURN LEFT UNTIL SENSOR'S ON LINE AGAIN
-          if(!turnRunOnceFlag) {
+          if(!runOnceFlag) {
             driver.drive(cfg::k_forwardSpeed, cfg::k_forwardSpeed);
             delay(cfg::k_forwardDuration);
-            turnRunOnceFlag = 1;
+            runOnceFlag = 1;
+            driver.drive(-cfg::k_turnLeftSpeed, cfg::k_turnLeftSpeed);
+            delay(400);
           }
           driver.drive(-cfg::k_turnLeftSpeed, cfg::k_turnLeftSpeed);
           if((!lastOnLineFlag) && onLineFlag) {
-            turnRunOnceFlag = 0;
+            runOnceFlag = 0;
             commandCounter++;
           }
           break;
         case 'p': //MOVE FORWARD UNTIL LASER IS TRIGGERED. THEN PICKUP THE CUBE, MOVE BACK & TURN AROUND.
-          if(!turnRunOnceFlag) {
-            turnRunOnceFlag = 1;
-            PDForwardTimer = millis();
+          if(!runOnceFlag) {
+            runOnceFlag = 1;
+            PDForwardTime = millis();
           }
           if(!pickedUpFlag) {
-            if(millis() - PDForwardTimer < cfg::k_PDForwardTimeout) {
+            if(millis() - PDForwardTime < 500) {
               PIDSpeedModifier = cfg::k_p * currentError + cfg::k_d * (currentError - lastError) / dT;
-              PIDSpeedModifier = constrain(PIDSpeedModifier, -35, 35);
               driver.drive(cfg::k_base * 0.6 + PIDSpeedModifier, cfg::k_base * 0.6 - PIDSpeedModifier);
             } 
             else {
               driver.drive(0, 0);
               spi.writeToSlave(cfg::k_armPickUpWord, cfg::pins::armNanoSS);
-              delay(3000);
+              delay(5000);
               pickedUpFlag = 1;
+              driver.drive(cfg::k_base, cfg::k_base);
+              delay(150);
             }
           }
           else {
             driver.drive(cfg::k_turnRightSpeed, -cfg::k_turnRightSpeed);
             if(!lastOnLineFlag && onLineFlag) {
-              turnRunOnceFlag = 0;
+              runOnceFlag = 0;
               driver.drive(0, 0);
               commandCounter++;
             }
           }
           break;
         case 'd':
+          driver.drive(0,0);
           spi.writeToSlave(cfg::k_armDropWord, cfg::pins::armNanoSS);
           delay(3000);
           break;
         case 's':
           if(!(!lastLineColorFlag && lineColorFlag)) {
-            
+            PIDSpeedModifier = cfg::k_p * currentError + cfg::k_d * (currentError - lastError) / dT;
+            driver.drive(cfg::k_base + PIDSpeedModifier, cfg::k_base - PIDSpeedModifier);
           }
           else {
             driver.drive(cfg::k_base, cfg::k_base);
-            delay(1500);
+            delay(2000);
             driver.drive(0, 0);
             while(1) {}
           }

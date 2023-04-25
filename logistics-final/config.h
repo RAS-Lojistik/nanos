@@ -8,23 +8,19 @@
 #define NRF_ACTIVE
 
 namespace cfg {
-  static const int16_t k_base = 55;
+  static const int16_t k_base = 50;
   static const float k_p = 0.05;
   static const float k_d = 1200;
-
-  static const float k_onLineThreshold = 0.4f;
 
   static const int16_t k_turnRightSpeed = 40; //DURATION 750 FOR 90 DEGREES
   static const int16_t k_turnLeftSpeed = 40;
   static const int16_t k_forwardSpeed = 40;
-  static const int16_t k_forwardDuration = 480;
-
-  static const uint32_t k_PDForwardTimeout = 700;
+  static const int16_t k_forwardDuration = 500; //DELETE THE PLUS FOR 4.2V
 
   static const uint8_t k_sensorCount = 6;
   static const QTRReadMode k_readMode = QTRReadMode::On;
   static const uint16_t k_calibrationMoveDuration = 1300;
-  static const uint16_t k_calibrationMoveSpeed = 45;
+  static const uint16_t k_calibrationMoveSpeed = 40;
   static const uint8_t k_calibrationWiggleCount = 2;
 
   static const uint32_t k_serialBaudRate = 115200;
