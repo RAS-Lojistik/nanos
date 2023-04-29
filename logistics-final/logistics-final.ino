@@ -294,6 +294,7 @@ void loop() {
           spi.writeToSlave(cfg::k_armDropWord, cfg::pins::armNanoSS);
           delay(3000);
           break;
+          
         case 's':
           if(!(!lastLineColorFlag && lineColorFlag)) {
             PIDSpeedModifier = cfg::k_p * currentError + cfg::k_d * (currentError - lastError) / dT;

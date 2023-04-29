@@ -15,7 +15,7 @@ namespace cfg {
   static const int16_t k_turnRightSpeed = 40; //DURATION 750 FOR 90 DEGREES
   static const int16_t k_turnLeftSpeed = 40;
   static const int16_t k_forwardSpeed = 40;
-  static const int16_t k_forwardDuration = 500; //DELETE THE PLUS FOR 4.2V
+  static const int16_t k_forwardDuration = 440; //DELETE THE PLUS FOR 4.2V
 
   static const uint8_t k_sensorCount = 6;
   static const QTRReadMode k_readMode = QTRReadMode::On;

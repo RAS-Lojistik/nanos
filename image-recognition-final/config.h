@@ -4,7 +4,7 @@
 #include <QTRSensors.h>
 
 #define aDEBUG_SERIAL
-#define aLOGI_TEST
+#define LOGI_TEST
 
 namespace cfg {
   static const int16_t k_base = 35;

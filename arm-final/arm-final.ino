@@ -29,7 +29,7 @@ void setup() {
   stepper.setSpeed(15);
 
   myServo.write(35);
-  stepper.step(750);
+  stepper.step(850);
   delay(1000);
 }
 
@@ -45,19 +45,19 @@ void loop() {
 }
 
 void grab_and_up() {
-  stepper.step(-450);
+  stepper.step(-500);
   delay(1000);
-  myServo.write(115);
+  myServo.write(125);
   delay(1000);
-  stepper.step(750);
+  stepper.step(850);
   delay(1000);
 }
 
 void down_and_loose() {
-  stepper.step(-450);
+  stepper.step(-500);
   delay(1000);
   myServo.write(35);
   delay(1000);
-  stepper.step(750);
+  stepper.step(850);
   delay(1000);
 }
